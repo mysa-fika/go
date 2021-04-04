@@ -1,9 +1,6 @@
 package response
 
 import (
-	"net/http"
-
-	"github.com/go-chi/render"
 	"github.com/rs/zerolog"
 )
 
@@ -15,14 +12,8 @@ type ErrorResponse struct {
 	InternalMessage string `json:"-"`
 }
 
-// Render implementation satisfying render.Renderer
-func (e *ErrorResponse) Render(w http.ResponseWriter, r *http.Request) error {
-	render.Status(r, e.HTTPStatusCode)
-	return nil
-}
-
 // NewErrorResponse logs the error and returns renderable response.
-func NewErrorResponse(msg string, status int, err error, logger *zerolog.Logger) render.Renderer {
+func NewErrorResponse(msg string, status int, err error, logger *zerolog.Logger) *ErrorResponse {
 	internalMessage := ""
 	if err != nil {
 		logger.Error().Err(err).Msg("HTTP error response")

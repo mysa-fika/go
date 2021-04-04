@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"net/http"
+	"os"
 	"path/filepath"
-	"authentication-service/pkg/infrastructure/log"
-	"authentication-service/pkg/configuration"
-	"authentication-service/pkg/web"
+
 	"github.com/spf13/cobra"
+	"github.com/mysa-fika/go/authentication-service/pkg/configuration"
+	"github.com/mysa-fika/go/infrastructure/log"
+	"github.com/mysa-fika/go/authentication-service/pkg/web"
 )
 
 var serverCmd = &cobra.Command{
@@ -28,10 +29,10 @@ var serverCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		f := os.Stdout
-		if appConfiguration.LogLevel == "error" {
-			f = os.Stderr
-		}
+		// f := os.Stdout
+		// if appConfiguration.LogLevel == "error" {
+		// 	f = os.Stderr
+		// }
 
 		err = appConfiguration.Validate()
 		if err != nil {
@@ -39,7 +40,7 @@ var serverCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		logger, err := log.NewZerolog(f, appConfiguration.LogLevel)
+		logger := log.NewZerolog(true)
 		if err != nil {
 			fmt.Printf("could not instantiate zerolog: [%s]", err.Error())
 			os.Exit(1)

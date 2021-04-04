@@ -1,6 +1,6 @@
 package main
 
-import "authentication-service/cmd"
+import "github.com/mysa-fika/go/authentication-service/cmd"
 
 func main() {
 	cmd.Execute()

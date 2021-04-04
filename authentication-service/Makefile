@@ -1,3 +1,3 @@
 GOSERVICE := authentication-service
 
-include ./Makefile.GO
+include ../Makefile.GO

@@ -9,60 +9,60 @@ import (
 	"syscall"
 	"time"
 
-	"authentication-service/pkg/configuration"
-	"authentication-service/pkg/domain"
-	"authentication-service/pkg/infrastructure/storage/memory"
-	"authentication-service/pkg/service"
-	webdemo "authentication-service/pkg/web/demo"
+	"github.com/mysa-fika/go/infrastructure/log"
 
-	"github.com/go-chi/chi"
-	chimiddleware "github.com/go-chi/chi/middleware"
-	"github.com/go-chi/render"
-	"github.com/rs/zerolog"
+	"github.com/mysa-fika/go/authentication-service/pkg/configuration"
+	"github.com/mysa-fika/go/authentication-service/pkg/domain"
+	"github.com/mysa-fika/go/authentication-service/pkg/infrastructure/storage/memory"
+	"github.com/mysa-fika/go/authentication-service/pkg/service"
+	webuser "github.com/mysa-fika/go/authentication-service/pkg/web/user"
+
+	routing "github.com/go-ozzo/ozzo-routing"
+	"github.com/go-ozzo/ozzo-routing/content"
 )
 
-// NewDemoRepository instantiates a storage repository according to the configuration.
-func NewDemoRepository(ctx context.Context, cfg *configuration.AppConfiguration, logger *zerolog.Logger) (domain.DemoRepository, error) {
+func NewUsersRepository(ctx context.Context, cfg *configuration.AppConfiguration, logger *log.Logger) (domain.Repository, error) {
 	switch cfg.Repository.Adapter {
 	case "memory":
-		return memory.NewDemoRepository(ctx, cfg.Repository.Options, logger)
+		return memory.NewRepository(ctx, cfg.Repository.Options, logger)
+	// case "psql":
+	// 	return psql.NewRepository(ctx, cfg.Repository.Options, logger)
 	default:
 		return nil, fmt.Errorf("unknown storage adapter: [%s]", cfg.Repository.Adapter)
 	}
 }
 
-// NewDemoService fires up a demo service
-func NewDemoService(r domain.DemoRepository, l *zerolog.Logger) (*service.DemoService, error) {
-	return &service.DemoService{
+
+func NewUserService(r domain.Repository, logger *log.Logger) (*service.UserService, error) {
+	return &service.UserService{
 		Repository: r,
-		Logger:     l,
+		Logger:     logger,
 	}, nil
 }
 
 // NewRouter creates a mux with mounted routes and instantiates respective dependencies.
-func NewRouter(ctx context.Context, cfg *configuration.AppConfiguration, logger *zerolog.Logger) *chi.Mux {
-	demoRepository, err := NewDemoRepository(ctx, cfg, logger)
+func NewRouter(ctx context.Context, cfg *configuration.AppConfiguration, logger *log.Logger) *routing.Router {
+	userRepository, err := NewUsersRepository(ctx, cfg, logger)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Could not instantiate the demo repository")
+		logger.Fatal().Err(err).Msg("Could not instantiate the users repository")
 	}
 
-	demoService, err := NewDemoService(demoRepository, logger)
+	userService, err := NewUserService(userRepository, logger)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Could not instantiate the demo service")
 	}
 
-	r := chi.NewRouter()
+	r := routing.New()
 
-	r.Use(render.SetContentType(render.ContentTypeJSON))
-	r.Use(chimiddleware.Heartbeat("/status"))
-
-	r.Mount("/api", webdemo.Handler{}.Routes(logger, demoService))
+	usersAPI := r.Group("/users")
+	usersAPI.Use(content.TypeNegotiator(content.JSON))
+	webuser.Handler{}.Routes(usersAPI, logger, userService)
 
 	return r
 }
 
 // LaunchServer starts a web server and propagates shutdown context.
-func LaunchServer(cfg *configuration.AppConfiguration, logger *zerolog.Logger) error {
+func LaunchServer(cfg *configuration.AppConfiguration, logger *log.Logger) error {
 	var err error
 
 	c := make(chan os.Signal, 1)
